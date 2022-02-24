@@ -123,7 +123,9 @@ var SnxPanelMenuButton = GObject.registerClass({
     _onVpnConnected() {
         if (this._icon) {
             this._icon.set_gicon(Gio.icon_new_for_string(Me.path + '/icons/vpn-caps-symbolic.svg'));
-            this._icon.set_style_class_name('connected');
+            this._icon.remove_style_class_name('pending');
+            this._icon.remove_style_class_name('disconnected');
+            this._icon.add_style_class_name('connected');
         }
 
         if (this._label) {
@@ -135,7 +137,9 @@ var SnxPanelMenuButton = GObject.registerClass({
     _onVpnDisconnected() {
         if (this._icon) {
             this._icon.set_gicon(Gio.icon_new_for_string(Me.path + '/icons/vpn-caps-disabled-symbolic.svg'));
-            this._icon.set_style_class_name('disconnected');
+            this._icon.remove_style_class_name('pending');
+            this._icon.remove_style_class_name('connected');
+            this._icon.add_style_class_name('disconnected');
         }
 
         if (this._label) {
