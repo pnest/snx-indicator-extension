@@ -1,0 +1,8 @@
+{
+  "name": "SnxExtension",
+  "description": "Indicates VPN connection status using snx application",
+  "uuid": "snxapplet@paulnest",
+  "shell-version": [
+    "3.36"
+  ]
+}
