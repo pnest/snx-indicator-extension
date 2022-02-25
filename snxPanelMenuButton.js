@@ -12,20 +12,19 @@ const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 
 const SNX_TUNNEL_LABEL = 'tunsnx';
+const CHECK_STATUS_INTERVAL_SECONDS = 30;
 
 var SnxPanelMenuButton = GObject.registerClass({
     GTypeName: 'SnxPanelMenuButton',
 }, class SnxPanelMenuButton extends PanelMenu.Button {
     constructor() {
         super();
-        this._indicator = null;
-        this._checkStatusMenuItem = null;
-        this._scheduleCheckStatusSourceId = null;
-        this._checkStatusSourceId = null;
         this._icon = null;
         this._boxLayout = null;
 
-        log(`${Me.metadata.name}: creating`);
+        // SourceId
+        this._checkStatusSourceId = null;
+        this._scheduleCheckStatusSourceId = null;
     }
 
     _init() {
@@ -48,35 +47,41 @@ var SnxPanelMenuButton = GObject.registerClass({
         });
         this._boxLayout.add_child(this._icon);
 
-        this._checkStatusMenuItem = this.menu.addAction(_('Check status'), this._scheduleCheckStatus.bind(this));
+        this.menu.addAction(_('Check status now'), this._onCheckStatus.bind(this));
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction(_('Open Settings'));
 
-        this._scheduleCheckStatus();
+        this._checkStatus();
+        this._scheduleCheckStatus(CHECK_STATUS_INTERVAL_SECONDS);
     }
 
     destroy() {
         super.destroy();
+
+        if (this._scheduleCheckStatusSourceId) {
+            GLib.Source.remove(this._scheduleCheckStatusSourceId);
+        }
+
+        if (this._checkStatusSourceId) {
+            GLib.Source.remove(this._checkStatusSourceId);
+        }
     }
 
-    _scheduleCheckStatusOnIdle() {
-        if (this._scheduleCheckStatusSourceId || this._checkStatusSourceId) {
-            log(`${Me.metadata.name}: skipping scheduling check status`);
+    _scheduleCheckStatus(interval) {
+        if (this._scheduleCheckStatusSourceId) {
+            log(`${Me.metadata.name}: skipping scheduling check status on idle`);
             return;
         }
 
-        this._scheduleCheckStatusSourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        this._scheduleCheckStatusSourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, interval, () => {
             this._scheduleCheckStatusSourceId = null;
-            log(`${Me.metadata.name} was invoked because no other sources were read`);
-            this._scheduleCheckStatus();
+            this._checkStatus(() => this._scheduleCheckStatus(interval));
             return GLib.SOURCE_REMOVE;
         });
-        log(`${Me.metadata.name}: scheduling check status on idle with sourceId=${this._scheduleCheckStatusSourceId}`);
     }
 
-    _scheduleCheckStatus() {
+    _checkStatus(onStatusChecked) {
         if (this._checkStatusSourceId) {
-            log(`${Me.metadata.name}: skipping scheduling check status on idle`);
             return;
         }
 
@@ -107,6 +112,10 @@ var SnxPanelMenuButton = GObject.registerClass({
                     } catch (error) {
                         logError(error, 'Cannot handle command output due to unexpected error');
                         this._onVpnDisconnected();
+                    } finally {
+                        if (onStatusChecked) {
+                            onStatusChecked();
+                        }
                     }
                 });
             } catch (error) {
@@ -116,8 +125,10 @@ var SnxPanelMenuButton = GObject.registerClass({
             }
             return GLib.SOURCE_REMOVE;
         });
-        log(`${Me.metadata.name}: scheduling check status on idle with sourceId=${this._checkStatusSourceId}`);
+    }
 
+    _onCheckStatus() {
+        this._checkStatus();
     }
 
     _onVpnConnected() {
