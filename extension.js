@@ -1,4 +1,4 @@
-'use strict';
+const Gio = imports.gi.Gio;
 
 const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -13,7 +13,6 @@ class Extension {
     }
 
     enable() {
-        log(`enabling ${Me.metadata.name} in Extension`);
         this._indicator = new SnxPanelMenuButton();
         Main.panel.addToStatusArea('SNX Indicator', this._indicator);
     }
@@ -28,7 +27,16 @@ class Extension {
     }
 }
 
-function init() {
-    log(`Creating extension ${Me.metadata.name}. Search path '${imports.searchPath}'`);
+function init(meta) {
+    log(`Creating extension ${Me.metadata.name}. Search path '${imports.searchPath}'.`);
+    Object.keys(meta).forEach((key, index) => {
+        if (index === 0) {
+            Object.keys(meta[key]).forEach((innerKey) => {
+                log(`${Me.metadata.name}: ${key}.${innerKey}=${meta[key][innerKey]}`);
+            });
+        } else {
+            log(`${Me.metadata.name}: ${key}=${meta[key]}`);
+        }
+    });
     return new Extension();
 }

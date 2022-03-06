@@ -1,8 +1,9 @@
 {
-  "name": "SnxExtension",
+  "name": "Snx Indicator Extension",
   "description": "Indicates VPN connection status using snx application",
-  "uuid": "snxapplet@paulnest",
+  "uuid": "snx-indicator-extension@pnest.github.com",
   "shell-version": [
     "3.36"
-  ]
+  ],
+  "settings-schema": "org.gnome.shell.extensions.snx-indicator-extension"
 }

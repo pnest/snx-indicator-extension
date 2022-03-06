@@ -12,7 +12,6 @@ const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 
 const SNX_TUNNEL_LABEL = 'tunsnx';
-const CHECK_STATUS_INTERVAL_SECONDS = 30;
 
 var SnxPanelMenuButton = GObject.registerClass({
     GTypeName: 'SnxPanelMenuButton',
@@ -22,6 +21,9 @@ var SnxPanelMenuButton = GObject.registerClass({
         this._icon = null;
         this._boxLayout = null;
 
+        // GSettings
+        this._settings = null;
+
         // SourceId
         this._checkStatusSourceId = null;
         this._scheduleCheckStatusSourceId = null;
@@ -29,6 +31,8 @@ var SnxPanelMenuButton = GObject.registerClass({
 
     _init() {
         super._init(St.Align.START, _('SNX Tunnel Indicator'), false);
+
+        this._settings = ExtensionUtils.getSettings();
 
         this._boxLayout = new St.BoxLayout({ vertical: false, style_class: 'panel-status-menu-box' });
         this.add_child(this._boxLayout);
@@ -49,10 +53,10 @@ var SnxPanelMenuButton = GObject.registerClass({
 
         this.menu.addAction(_('Check status now'), this._onCheckStatus.bind(this));
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addAction(_('Open Settings'));
+        this.menu.addAction(_('Open Settings'), this._onOpenPrefs.bind(this));
 
         this._checkStatus();
-        this._scheduleCheckStatus(CHECK_STATUS_INTERVAL_SECONDS);
+        this._scheduleCheckStatus();
     }
 
     destroy() {
@@ -67,15 +71,18 @@ var SnxPanelMenuButton = GObject.registerClass({
         }
     }
 
-    _scheduleCheckStatus(interval) {
+    _scheduleCheckStatus() {
         if (this._scheduleCheckStatusSourceId) {
             log(`${Me.metadata.name}: skipping scheduling check status on idle`);
             return;
         }
 
+        const interval = this._settings.get_int('check-status-interval');
+        log(`${Me.metadata.name}: check interval is ${interval} seconds`);
+
         this._scheduleCheckStatusSourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, interval, () => {
             this._scheduleCheckStatusSourceId = null;
-            this._checkStatus(() => this._scheduleCheckStatus(interval));
+            this._checkStatus(() => this._scheduleCheckStatus());
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -88,7 +95,6 @@ var SnxPanelMenuButton = GObject.registerClass({
         this._checkStatusSourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             try {
                 Gio.Subprocess.new(
-                    // ['sh', '-c', 'ip -brief address | grep snx'],
                     ['ip', '-brief', 'address', 'show', 'label', SNX_TUNNEL_LABEL, 'up'],
                     Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
                 ).communicate_utf8_async(null, null, (proc, result) => {
@@ -131,6 +137,10 @@ var SnxPanelMenuButton = GObject.registerClass({
         this._checkStatus();
     }
 
+    _onOpenPrefs() {
+        ExtensionUtils.openPrefs();
+    }
+
     _onVpnConnected() {
         if (this._icon) {
             this._icon.set_gicon(Gio.icon_new_for_string(Me.path + '/icons/vpn-caps-symbolic.svg'));
@@ -140,7 +150,7 @@ var SnxPanelMenuButton = GObject.registerClass({
         }
 
         if (this._label) {
-            this._label.set_text(`${SNX_TUNNEL_LABEL} UP`);
+            this._label.set_text(`${SNX_TUNNEL_LABEL} ${_('UP')}`);
             this._label.set_style_class_name('connected');
         }
     }
@@ -154,7 +164,7 @@ var SnxPanelMenuButton = GObject.registerClass({
         }
 
         if (this._label) {
-            this._label.set_text(`${SNX_TUNNEL_LABEL} DOWN`);
+            this._label.set_text(`${SNX_TUNNEL_LABEL} ${_('DOWN')}`);
             this._label.set_style_class_name('disconnected');
         }
     }

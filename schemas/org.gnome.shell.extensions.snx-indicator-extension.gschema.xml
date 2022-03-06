@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="snx-indicator-extension">
+    <schema id="org.gnome.shell.extensions.snx-indicator-extension" path="/org/gnome/shell/extensions/snx-indicator-extension/">
+        <key name="check-status-interval" type="i">
+            <default>30</default>
+            <summary>Check status interval, seconds</summary>
+            <description></description>
+        </key>
+        <key name="ping-check" type="b">
+            <default>false</default>
+            <summary>Check remote server availability with PING command</summary>
+            <description></description>
+        </key>
+        <key name="ping-destination" type="s">
+            <default>"exmaple.com"</default>
+            <summary>Destination for ping commad</summary>
+            <description></description>
+        </key>
+    </schema>
+</schemalist>
